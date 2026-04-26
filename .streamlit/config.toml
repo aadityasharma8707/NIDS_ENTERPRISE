@@ -1,0 +1,16 @@
+[theme]
+# Neon Matrix Green
+primaryColor = '#00FF41'
+
+# Absolute Black
+backgroundColor = '#000000'
+
+# Very Dark Grey for cards/sidebars
+secondaryBackgroundColor = '#0A0A0A'
+
+# Off-white text for readability, with green accents handled in CSS
+textColor = '#E0E0E0'
+font = 'monospace'
+
+[layout]
+maximized = true
