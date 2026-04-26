@@ -2,6 +2,10 @@
 
 A real-time network intrusion detection system capable of processing network flows, running an XGBoost classification model to identify threats, and visualizing results on a live Streamlit dashboard.
 
+---
+### 📚 [View Full Technical Documentation](DOCUMENTATION.md)
+---
+
 ## Architecture
 
 The system is built on a scalable data pipeline:
