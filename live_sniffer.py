@@ -1,17 +1,14 @@
 import os
 import json
+import psycopg2
+import time
 from dotenv import load_dotenv
 from scapy.all import sniff, IP, TCP, UDP
-from confluent_kafka import Producer
 
 # Load environment variables
 load_dotenv()
 
-def delivery_report(err, msg):
-    if err is not None:
-        print(f"Message delivery failed: {err}")
-
-def packet_callback(producer, topic):
+def packet_callback(db_conn):
     def callback(packet):
         if IP in packet:
             src_ip = packet[IP].src
@@ -20,49 +17,61 @@ def packet_callback(producer, topic):
             
             src_port = 0
             dst_port = 0
-            payload_len = 0
             
             if TCP in packet:
                 src_port = packet[TCP].sport
                 dst_port = packet[TCP].dport
-                payload_len = len(packet[TCP].payload)
             elif UDP in packet:
                 src_port = packet[UDP].sport
                 dst_port = packet[UDP].dport
-                payload_len = len(packet[UDP].payload)
             
-            # Format basic features as JSON
-            flow_data = {
-                'Source IP': src_ip,
-                'Destination IP': dst_ip,
-                'Source Port': src_port,
-                'Destination Port': dst_port,
-                'Protocol': proto,
-                'Payload Length': payload_len,
-                'Flow Duration': 0 # mock duration for packet-level capture
-            }
-            
-            print(f"Captured: {src_ip}:{src_port} -> {dst_ip}:{dst_port} [Proto: {proto}]")
-            
-            # Stream to Kafka
-            producer.produce(topic, json.dumps(flow_data).encode('utf-8'), callback=delivery_report)
-            producer.poll(0)
+            # Direct-to-Cloud Injection
+            if db_conn:
+                try:
+                    cur = db_conn.cursor()
+                    cur.execute("""
+                        INSERT INTO alerts (source_ip, dest_ip, attack_type, confidence, inference_time_ms) 
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (src_ip, dst_ip, 'LIVE_TRAFFIC', 1.0, 0.0))
+                    db_conn.commit()
+                    cur.close()
+                    print(f"    [+] TELEMETRY TRANSMITTED -> CLOUD SIEM: {src_ip} -> {dst_ip}")
+                except Exception as e:
+                    print(f"    [!] UPLINK_ERROR: Cloud sync failed ({e})")
+                    
     return callback
 
 def main():
-    kafka_broker = os.getenv('KAFKA_BROKER', 'localhost:9092')
-    producer = Producer({'bootstrap.servers': kafka_broker})
-    topic = 'live-network-flows'
+    db_url = os.getenv('RENDER_EXTERNAL_DB_URL')
     
-    print(f"Starting live sniffer... capturing from default interface.")
-    print(f"Streaming packets to Kafka topic: {topic} at {kafka_broker}")
+    print(f"--- NIDS-X FORWARD DEPLOYED SENSOR (DIRECT-UPLINK MODE) ---")
+    
+    if not db_url:
+        print("[!] ERROR: RENDER_EXTERNAL_DB_URL not found in .env. Deployment aborted.")
+        return
+
+    print("[*] Initializing Cloud SIEM handshake...")
+    db_conn = None
+    try:
+        db_conn = psycopg2.connect(db_url)
+        print("[+] CLOUD_SYNC_ESTABLISHED: Remote Database ONLINE.")
+    except Exception as e:
+        print(f"[!] CRITICAL_CONNECTION_FAILURE: {e}")
+        return
+
+    print(f"[*] Sniffer Active. Monitoring default interface...")
+    
     try:
         # Sniff packets and invoke callback for each
-        sniff(prn=packet_callback(producer, topic), store=0)
+        sniff(prn=packet_callback(db_conn), store=0)
     except KeyboardInterrupt:
-        print("Stopping sniffer...")
+        print("\n[!] Sensor deactivated by operator.")
+    except Exception as e:
+        print(f"\n[!] CRITICAL_SENSOR_ERROR: {e}")
     finally:
-        producer.flush()
+        if db_conn:
+            db_conn.close()
+            print("[*] Cloud connection closed.")
 
 if __name__ == "__main__":
     main()

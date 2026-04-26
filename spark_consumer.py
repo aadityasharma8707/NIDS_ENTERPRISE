@@ -48,19 +48,25 @@ def main():
 
     # Initialize PostgreSQL connection
     db_conn = None
+    db_url = os.getenv("RENDER_EXTERNAL_DB_URL")
     max_retries = 10
-    print("Connecting to PostgreSQL...")
+    
     for i in range(max_retries):
         try:
-            db_conn = psycopg2.connect(
-                host=os.getenv("DB_HOST", "localhost"),
-                database=os.getenv("DB_NAME", "nids_db"),
-                user=os.getenv("DB_USER", "admin"),
-                password=os.getenv("DB_PASS", "nids_password"),
-                port="5432"
-            )
+            if db_url:
+                print(f"Connecting to Render Cloud Database (Attempt {i+1})...")
+                db_conn = psycopg2.connect(db_url)
+            else:
+                print(f"Connecting to Local PostgreSQL (Attempt {i+1})...")
+                db_conn = psycopg2.connect(
+                    host=os.getenv("DB_HOST", "localhost"),
+                    database=os.getenv("DB_NAME", "nids_db"),
+                    user=os.getenv("DB_USER", "admin"),
+                    password=os.getenv("DB_PASS", "nids_password"),
+                    port="5432"
+                )
             db_conn.autocommit = True
-            print("Connected to PostgreSQL successfully.")
+            print("[+] CLOUD_PERSISTENCE_READY: Connection established.")
             break
         except Exception as e:
             print(f"Waiting for PostgreSQL... ({i+1}/{max_retries})")
@@ -139,7 +145,6 @@ def main():
                     attack_type = 'BENIGN'
                     print(f"Analyzing Flow: {source_ip} -> {dest_ip} [BENIGN] (Inference: {inference_time_ms:.2f}ms)")
                     
-                if db_conn:
                     try:
                         cur = db_conn.cursor()
                         cur.execute(
@@ -147,8 +152,9 @@ def main():
                             (source_ip, dest_ip, attack_type, confidence, inference_time_ms)
                         )
                         cur.close()
+                        print(f"    [+] TELEMETRY TRANSMITTED -> CLOUD SIEM")
                     except Exception as e:
-                        print(f"Failed to insert record into database: {e}")
+                        print(f"    [!] UPLINK_FAILURE: Failed to sync with cloud ({e})")
                 
             except json.JSONDecodeError:
                 print(f"Failed to decode message: {value_str}")
