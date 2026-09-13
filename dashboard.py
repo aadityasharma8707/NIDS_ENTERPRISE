@@ -24,7 +24,7 @@ import datetime
 load_dotenv()
 
 # Set page config
-st.set_page_config(layout='wide', page_title="NIDS Dashboard", page_icon="🛡️")
+st.set_page_config(layout='wide', page_title="NIDS Dashboard", page_icon="🛡️", initial_sidebar_state="expanded")
 
 st.markdown('''<style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700&display=swap');
@@ -39,7 +39,6 @@ html, body, [class*="css"] {
 
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
 
 /* Purple Glassdoor Metrics */
 [data-testid="metric-container"] {
@@ -118,7 +117,7 @@ if page == '🏠 Overview':
     st.markdown(
         '<div style="width: 100%; padding: 40px; border-radius: 20px; background: rgba(46, 16, 101, 0.3); '
         'backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 8px solid #00FF41; '
-        'box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8); margin-bottom: 40px; position: relative;">'
+        'box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8); margin-bottom: 40px; position: relative;>'
         '<div style="position: absolute; top: 15px; right: 20px; font-family: monospace; color: #00FF41; font-size: 10px; letter-spacing: 1px;">'
         '[ AADITYA // NIDS-X : DEV_MODE ]</div>'
         '<h1 style="color: white; font-size: 55px; font-weight: 700; margin: 0; line-height: 1.1; font-family: \'Space Grotesk\';">'
